@@ -52,6 +52,7 @@ const CFDAnalysis = () => {
           id: Date.now() + 2,
           type: 'result',
           success: true,
+          retryData: { input, path },
           data: {
             filesProcessed: Math.floor(Math.random() * 50) + 10,
             convergenceRate: `${(Math.random() * 20 + 80).toFixed(1)}%`,
@@ -125,6 +126,7 @@ const CFDAnalysis = () => {
               key={message.id}
               message={message}
               onRetry={handleRetry}
+              isAnalyzing={isAnalyzing}
             />
           ))}
           <div ref={messagesEndRef} />
@@ -209,7 +211,7 @@ const CFDAnalysis = () => {
 };
 
 // Message Bubble Component
-const MessageBubble = ({ message, onRetry }) => {
+const MessageBubble = ({ message, onRetry, isAnalyzing }) => {
   if (message.type === 'system') {
     return (
       <div className="flex justify-center animate-fade-in">
@@ -222,7 +224,14 @@ const MessageBubble = ({ message, onRetry }) => {
 
   if (message.type === 'user') {
     return (
-      <div className="flex justify-end animate-slide-up">
+      <div className="flex justify-end items-start gap-2 animate-slide-up group">
+        <button
+          onClick={() => onRetry({ input: message.content, path: message.path })}
+          className="opacity-0 group-hover:opacity-100 mt-3 p-1.5 rounded-lg hover:bg-secondary transition-all"
+          title="Retry this analysis"
+        >
+          <RefreshIcon className="w-4 h-4 text-muted-foreground" />
+        </button>
         <div className="bg-primary text-primary-foreground px-4 py-3 rounded-2xl rounded-br-md max-w-lg">
           {message.path && (
             <div className="flex items-center gap-2 mb-2 pb-2 border-b border-primary-foreground/20">
@@ -255,7 +264,7 @@ const MessageBubble = ({ message, onRetry }) => {
   if (message.type === 'result') {
     if (message.success) {
       return (
-        <div className="flex justify-start animate-slide-up">
+        <div className="flex justify-start items-start gap-2 animate-slide-up group">
           <div className="bg-card border border-border rounded-2xl rounded-bl-md max-w-lg overflow-hidden">
             <div className="bg-success/10 px-4 py-3 flex items-center gap-2 border-b border-border">
               <div className="w-6 h-6 rounded-full bg-success/20 flex items-center justify-center">
@@ -270,6 +279,14 @@ const MessageBubble = ({ message, onRetry }) => {
               <ResultItem label="Max Residual" value={message.data.maxResidual} />
             </div>
           </div>
+          <button
+            onClick={() => onRetry(message.retryData)}
+            disabled={isAnalyzing}
+            className="opacity-0 group-hover:opacity-100 mt-3 p-1.5 rounded-lg hover:bg-secondary disabled:opacity-50 transition-all"
+            title="Re-run this analysis"
+          >
+            <RefreshIcon className="w-4 h-4 text-muted-foreground" />
+          </button>
         </div>
       );
     } else {
