@@ -1,277 +1,377 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 const CFDAnalysis = () => {
-  const [inputType, setInputType] = useState('ids'); // 'ids' or 'directory'
-  const [cfdIds, setCfdIds] = useState('');
-  const [directoryPath, setDirectoryPath] = useState('');
-  const [analysisState, setAnalysisState] = useState('idle'); // 'idle', 'loading', 'success', 'error'
-  const [analysisResult, setAnalysisResult] = useState(null);
+  const [messages, setMessages] = useState([
+    {
+      id: 1,
+      type: 'system',
+      content: 'Welcome to CFD Analysis. Enter comma-separated CFD IDs or attach a directory path using the + button.',
+    },
+  ]);
+  const [inputValue, setInputValue] = useState('');
+  const [attachedPath, setAttachedPath] = useState('');
+  const [isPathDialogOpen, setIsPathDialogOpen] = useState(false);
+  const [pathInput, setPathInput] = useState('');
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const messagesEndRef = useRef(null);
 
-  const currentInput = inputType === 'ids' ? cfdIds : directoryPath;
-  const isInputEmpty = currentInput.trim() === '';
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
 
-  const runAnalysis = () => {
-    setAnalysisState('loading');
-    setAnalysisResult(null);
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
-    // Mock analysis with 2-second timeout
+  const runAnalysis = (input, path) => {
+    // Add user message
+    const userMessage = {
+      id: Date.now(),
+      type: 'user',
+      content: input || null,
+      path: path || null,
+    };
+    setMessages((prev) => [...prev, userMessage]);
+
+    // Add loading message
+    const loadingId = Date.now() + 1;
+    setMessages((prev) => [
+      ...prev,
+      { id: loadingId, type: 'loading', content: 'Analyzing CFD data…' },
+    ]);
+    setIsAnalyzing(true);
+
+    // Mock analysis
     setTimeout(() => {
-      // Simulate 80% success rate for demo
-      const isSuccess = Math.random() > 0.2;
+      const isSuccess = Math.random() > 0.15;
+
+      setMessages((prev) => prev.filter((m) => m.id !== loadingId));
 
       if (isSuccess) {
-        setAnalysisResult({
-          timestamp: new Date().toLocaleString(),
-          inputType: inputType === 'ids' ? 'CFD IDs' : 'Directory Path',
-          input: currentInput,
-          summary: 'Analysis completed successfully',
-          details: [
-            { label: 'Total CFD files processed', value: Math.floor(Math.random() * 50) + 10 },
-            { label: 'Convergence rate', value: `${(Math.random() * 20 + 80).toFixed(1)}%` },
-            { label: 'Average iterations', value: Math.floor(Math.random() * 1000) + 500 },
-            { label: 'Max residual', value: (Math.random() * 0.001).toExponential(3) },
-          ],
-        });
-        setAnalysisState('success');
+        const resultMessage = {
+          id: Date.now() + 2,
+          type: 'result',
+          success: true,
+          data: {
+            filesProcessed: Math.floor(Math.random() * 50) + 10,
+            convergenceRate: `${(Math.random() * 20 + 80).toFixed(1)}%`,
+            avgIterations: Math.floor(Math.random() * 1000) + 500,
+            maxResidual: (Math.random() * 0.001).toExponential(3),
+          },
+        };
+        setMessages((prev) => [...prev, resultMessage]);
       } else {
-        setAnalysisState('error');
+        const errorMessage = {
+          id: Date.now() + 2,
+          type: 'result',
+          success: false,
+          error: 'Analysis failed. Please check your inputs and try again.',
+          retryData: { input, path },
+        };
+        setMessages((prev) => [...prev, errorMessage]);
       }
-    }, 2000);
+      setIsAnalyzing(false);
+    }, 2500);
   };
 
-  const resetAnalysis = () => {
-    setAnalysisState('idle');
-    setAnalysisResult(null);
+  const handleSubmit = () => {
+    if ((!inputValue.trim() && !attachedPath) || isAnalyzing) return;
+
+    runAnalysis(inputValue.trim(), attachedPath);
+    setInputValue('');
+    setAttachedPath('');
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit();
+    }
+  };
+
+  const handlePathSubmit = () => {
+    if (pathInput.trim()) {
+      setAttachedPath(pathInput.trim());
+      setPathInput('');
+      setIsPathDialogOpen(false);
+    }
+  };
+
+  const handleRetry = (retryData) => {
+    runAnalysis(retryData.input, retryData.path);
+  };
+
+  const removeAttachment = () => {
+    setAttachedPath('');
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 sm:p-8">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
-      <div className="w-full max-w-2xl mb-8 text-center animate-fade-in">
-        <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-primary/10 mb-4">
-          <AnalysisIcon className="w-6 h-6 text-primary" />
+      <header className="border-b border-border bg-card px-4 py-4 flex items-center justify-center">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+            <AnalysisIcon className="w-5 h-5 text-primary" />
+          </div>
+          <h1 className="text-lg font-semibold text-foreground">CFD Analysis</h1>
         </div>
-        <h1 className="text-2xl sm:text-3xl font-semibold text-foreground mb-2">
-          CFD Analysis
-        </h1>
-        <p className="text-muted-foreground">
-          Run computational fluid dynamics analysis on your data
-        </p>
-      </div>
+      </header>
 
-      {/* Main Card */}
-      <div className="w-full max-w-2xl bg-card rounded-xl shadow-card border border-border overflow-hidden animate-slide-up">
-        {analysisState === 'idle' && (
-          <InputSection
-            inputType={inputType}
-            setInputType={setInputType}
-            cfdIds={cfdIds}
-            setCfdIds={setCfdIds}
-            directoryPath={directoryPath}
-            setDirectoryPath={setDirectoryPath}
-            isInputEmpty={isInputEmpty}
-            onRunAnalysis={runAnalysis}
-          />
-        )}
-
-        {analysisState === 'loading' && <LoadingSection />}
-
-        {analysisState === 'success' && (
-          <ResultSection result={analysisResult} onNewAnalysis={resetAnalysis} />
-        )}
-
-        {analysisState === 'error' && (
-          <ErrorSection onRetry={runAnalysis} onReset={resetAnalysis} />
-        )}
-      </div>
-
-      {/* Footer */}
-      <p className="mt-8 text-sm text-muted-foreground animate-fade-in">
-        Powered by advanced CFD simulation engine
-      </p>
-    </div>
-  );
-};
-
-// Input Section Component
-const InputSection = ({
-  inputType,
-  setInputType,
-  cfdIds,
-  setCfdIds,
-  directoryPath,
-  setDirectoryPath,
-  isInputEmpty,
-  onRunAnalysis,
-}) => {
-  return (
-    <div className="p-6 sm:p-8">
-      {/* Toggle */}
-      <div className="mb-6">
-        <label className="block text-sm font-medium text-foreground mb-3">
-          Input Method
-        </label>
-        <div className="flex bg-secondary rounded-lg p-1">
-          <ToggleButton
-            active={inputType === 'ids'}
-            onClick={() => setInputType('ids')}
-          >
-            <FileIcon className="w-4 h-4 mr-2" />
-            CFD IDs
-          </ToggleButton>
-          <ToggleButton
-            active={inputType === 'directory'}
-            onClick={() => setInputType('directory')}
-          >
-            <FolderIcon className="w-4 h-4 mr-2" />
-            Directory Path
-          </ToggleButton>
+      {/* Messages Area */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
+          {messages.map((message) => (
+            <MessageBubble
+              key={message.id}
+              message={message}
+              onRetry={handleRetry}
+            />
+          ))}
+          <div ref={messagesEndRef} />
         </div>
       </div>
 
-      {/* Input Fields */}
-      <div className="mb-6">
-        {inputType === 'ids' ? (
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-2">
-              CFD IDs
-            </label>
+      {/* Input Area */}
+      <div className="border-t border-border bg-card p-4">
+        <div className="max-w-3xl mx-auto">
+          {/* Attached Path Preview */}
+          {attachedPath && (
+            <div className="mb-3 flex items-center gap-2 animate-fade-in">
+              <div className="flex items-center gap-2 bg-accent text-accent-foreground px-3 py-2 rounded-lg text-sm">
+                <FolderIcon className="w-4 h-4" />
+                <span className="font-mono text-xs max-w-xs truncate">{attachedPath}</span>
+                <button
+                  onClick={removeAttachment}
+                  className="ml-1 hover:text-destructive transition-colors"
+                >
+                  <CloseIcon className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Input Bar */}
+          <div className="flex items-end gap-2 bg-secondary rounded-2xl p-2 border border-border focus-within:border-primary transition-colors">
+            {/* Plus Button */}
+            <button
+              onClick={() => setIsPathDialogOpen(true)}
+              className="flex-shrink-0 w-10 h-10 rounded-xl bg-card hover:bg-accent flex items-center justify-center transition-colors border border-border"
+              title="Attach directory path"
+            >
+              <PlusIcon className="w-5 h-5 text-muted-foreground" />
+            </button>
+
+            {/* Text Input */}
             <textarea
-              value={cfdIds}
-              onChange={(e) => setCfdIds(e.target.value)}
-              placeholder="Enter CFD IDs (comma or newline separated)"
-              className="w-full h-32 px-4 py-3 bg-background border border-input rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent resize-none transition-smooth"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Enter CFD IDs (comma separated)..."
+              rows={1}
+              className="flex-1 bg-transparent text-foreground placeholder:text-muted-foreground resize-none py-2.5 px-2 focus:outline-none min-h-[40px] max-h-32"
+              style={{ height: 'auto' }}
+              onInput={(e) => {
+                e.target.style.height = 'auto';
+                e.target.style.height = Math.min(e.target.scrollHeight, 128) + 'px';
+              }}
             />
+
+            {/* Send Button */}
+            <button
+              onClick={handleSubmit}
+              disabled={(!inputValue.trim() && !attachedPath) || isAnalyzing}
+              className="flex-shrink-0 w-10 h-10 rounded-xl bg-primary hover:bg-primary/90 disabled:bg-muted disabled:cursor-not-allowed flex items-center justify-center transition-colors"
+            >
+              <SendIcon className="w-5 h-5 text-primary-foreground" />
+            </button>
           </div>
-        ) : (
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-2">
-              Directory Path
-            </label>
-            <input
-              type="text"
-              value={directoryPath}
-              onChange={(e) => setDirectoryPath(e.target.value)}
-              placeholder="/path/to/cfd/directory"
-              className="w-full px-4 py-3 bg-background border border-input rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-smooth"
-            />
-          </div>
-        )}
-      </div>
 
-      {/* Run Button */}
-      <button
-        onClick={onRunAnalysis}
-        disabled={isInputEmpty}
-        className="w-full py-3 px-6 bg-primary text-primary-foreground font-medium rounded-lg hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-smooth flex items-center justify-center"
-      >
-        <PlayIcon className="w-5 h-5 mr-2" />
-        Run Analysis
-      </button>
-    </div>
-  );
-};
-
-// Toggle Button Component
-const ToggleButton = ({ active, onClick, children }) => {
-  return (
-    <button
-      onClick={onClick}
-      className={`flex-1 py-2.5 px-4 rounded-md font-medium text-sm transition-smooth flex items-center justify-center ${
-        active
-          ? 'bg-card text-foreground shadow-sm'
-          : 'text-muted-foreground hover:text-foreground'
-      }`}
-    >
-      {children}
-    </button>
-  );
-};
-
-// Loading Section Component
-const LoadingSection = () => {
-  return (
-    <div className="p-12 flex flex-col items-center justify-center animate-fade-in">
-      <div className="relative mb-6">
-        <div className="w-16 h-16 rounded-full border-4 border-secondary"></div>
-        <div className="absolute top-0 left-0 w-16 h-16 rounded-full border-4 border-primary border-t-transparent animate-spin"></div>
-      </div>
-      <p className="text-lg font-medium text-foreground mb-2">Analyzing CFD data…</p>
-      <p className="text-sm text-muted-foreground">This may take a moment</p>
-    </div>
-  );
-};
-
-// Result Section Component
-const ResultSection = ({ result, onNewAnalysis }) => {
-  return (
-    <div className="animate-fade-in">
-      {/* Success Header */}
-      <div className="p-6 bg-success/10 border-b border-success/20 flex items-center">
-        <div className="w-10 h-10 rounded-full bg-success/20 flex items-center justify-center mr-4">
-          <CheckIcon className="w-5 h-5 text-success" />
-        </div>
-        <div>
-          <h3 className="font-semibold text-foreground">Analysis Complete</h3>
-          <p className="text-sm text-muted-foreground">{result.timestamp}</p>
-        </div>
-      </div>
-
-      {/* Result Details */}
-      <div className="p-6 sm:p-8">
-        <div className="mb-6">
-          <h4 className="text-sm font-medium text-muted-foreground mb-1">Input</h4>
-          <p className="text-foreground bg-secondary px-3 py-2 rounded-md text-sm font-mono break-all">
-            {result.input.length > 100 ? result.input.substring(0, 100) + '...' : result.input}
+          <p className="text-xs text-muted-foreground text-center mt-3">
+            Use + to attach a CFD directory path, or enter comma-separated IDs directly
           </p>
         </div>
-
-        <div className="grid grid-cols-2 gap-4 mb-6">
-          {result.details.map((detail, index) => (
-            <div key={index} className="bg-secondary/50 rounded-lg p-4">
-              <p className="text-sm text-muted-foreground mb-1">{detail.label}</p>
-              <p className="text-lg font-semibold text-foreground">{detail.value}</p>
-            </div>
-          ))}
-        </div>
-
-        <button
-          onClick={onNewAnalysis}
-          className="w-full py-3 px-6 bg-secondary text-secondary-foreground font-medium rounded-lg hover:bg-secondary/80 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 transition-smooth flex items-center justify-center"
-        >
-          <RefreshIcon className="w-5 h-5 mr-2" />
-          New Analysis
-        </button>
       </div>
+
+      {/* Path Dialog */}
+      {isPathDialogOpen && (
+        <PathDialog
+          value={pathInput}
+          onChange={setPathInput}
+          onSubmit={handlePathSubmit}
+          onClose={() => {
+            setIsPathDialogOpen(false);
+            setPathInput('');
+          }}
+        />
+      )}
     </div>
   );
 };
 
-// Error Section Component
-const ErrorSection = ({ onRetry, onReset }) => {
-  return (
-    <div className="p-8 flex flex-col items-center justify-center animate-fade-in">
-      <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mb-6">
-        <ErrorIcon className="w-8 h-8 text-destructive" />
+// Message Bubble Component
+const MessageBubble = ({ message, onRetry }) => {
+  if (message.type === 'system') {
+    return (
+      <div className="flex justify-center animate-fade-in">
+        <div className="bg-accent text-accent-foreground px-4 py-3 rounded-xl text-sm text-center max-w-md">
+          {message.content}
+        </div>
       </div>
-      <h3 className="text-lg font-semibold text-foreground mb-2">Analysis Failed</h3>
-      <p className="text-muted-foreground text-center mb-6">
-        An error occurred during analysis. Please retry.
-      </p>
-      <div className="flex gap-3 w-full max-w-xs">
-        <button
-          onClick={onReset}
-          className="flex-1 py-3 px-4 bg-secondary text-secondary-foreground font-medium rounded-lg hover:bg-secondary/80 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 transition-smooth"
-        >
-          Back
-        </button>
-        <button
-          onClick={onRetry}
-          className="flex-1 py-3 px-4 bg-primary text-primary-foreground font-medium rounded-lg hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 transition-smooth flex items-center justify-center"
-        >
-          <RefreshIcon className="w-4 h-4 mr-2" />
-          Retry
-        </button>
+    );
+  }
+
+  if (message.type === 'user') {
+    return (
+      <div className="flex justify-end animate-slide-up">
+        <div className="bg-primary text-primary-foreground px-4 py-3 rounded-2xl rounded-br-md max-w-lg">
+          {message.path && (
+            <div className="flex items-center gap-2 mb-2 pb-2 border-b border-primary-foreground/20">
+              <FolderIcon className="w-4 h-4" />
+              <span className="font-mono text-xs opacity-90">{message.path}</span>
+            </div>
+          )}
+          {message.content && (
+            <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (message.type === 'loading') {
+    return (
+      <div className="flex justify-start animate-fade-in">
+        <div className="bg-card border border-border px-4 py-4 rounded-2xl rounded-bl-md flex items-center gap-3">
+          <div className="relative w-5 h-5">
+            <div className="absolute inset-0 rounded-full border-2 border-muted"></div>
+            <div className="absolute inset-0 rounded-full border-2 border-primary border-t-transparent animate-spin"></div>
+          </div>
+          <span className="text-sm text-muted-foreground">{message.content}</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (message.type === 'result') {
+    if (message.success) {
+      return (
+        <div className="flex justify-start animate-slide-up">
+          <div className="bg-card border border-border rounded-2xl rounded-bl-md max-w-lg overflow-hidden">
+            <div className="bg-success/10 px-4 py-3 flex items-center gap-2 border-b border-border">
+              <div className="w-6 h-6 rounded-full bg-success/20 flex items-center justify-center">
+                <CheckIcon className="w-4 h-4 text-success" />
+              </div>
+              <span className="font-medium text-sm text-foreground">Analysis Complete</span>
+            </div>
+            <div className="p-4 grid grid-cols-2 gap-3">
+              <ResultItem label="Files Processed" value={message.data.filesProcessed} />
+              <ResultItem label="Convergence Rate" value={message.data.convergenceRate} />
+              <ResultItem label="Avg Iterations" value={message.data.avgIterations} />
+              <ResultItem label="Max Residual" value={message.data.maxResidual} />
+            </div>
+          </div>
+        </div>
+      );
+    } else {
+      return (
+        <div className="flex justify-start animate-slide-up">
+          <div className="bg-card border border-destructive/30 rounded-2xl rounded-bl-md max-w-lg overflow-hidden">
+            <div className="bg-destructive/10 px-4 py-3 flex items-center gap-2">
+              <div className="w-6 h-6 rounded-full bg-destructive/20 flex items-center justify-center">
+                <ErrorIcon className="w-4 h-4 text-destructive" />
+              </div>
+              <span className="font-medium text-sm text-foreground">Analysis Failed</span>
+            </div>
+            <div className="p-4">
+              <p className="text-sm text-muted-foreground mb-3">{message.error}</p>
+              <button
+                onClick={() => onRetry(message.retryData)}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-secondary hover:bg-secondary/80 text-secondary-foreground text-sm font-medium rounded-lg transition-colors"
+              >
+                <RefreshIcon className="w-4 h-4" />
+                Retry Analysis
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+  }
+
+  return null;
+};
+
+// Result Item Component
+const ResultItem = ({ label, value }) => (
+  <div className="bg-secondary/50 rounded-lg p-3">
+    <p className="text-xs text-muted-foreground mb-1">{label}</p>
+    <p className="text-sm font-semibold text-foreground">{value}</p>
+  </div>
+);
+
+// Path Dialog Component
+const PathDialog = ({ value, onChange, onSubmit, onClose }) => {
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      onSubmit();
+    }
+    if (e.key === 'Escape') {
+      onClose();
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in">
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-foreground/20 backdrop-blur-sm" onClick={onClose} />
+
+      {/* Dialog */}
+      <div className="relative bg-card border border-border rounded-2xl shadow-elevated w-full max-w-md animate-slide-up">
+        <div className="p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+              <FolderIcon className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <h2 className="font-semibold text-foreground">Attach Directory Path</h2>
+              <p className="text-sm text-muted-foreground">Enter the path to your CFD directory</p>
+            </div>
+          </div>
+
+          <input
+            ref={inputRef}
+            type="text"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="/path/to/cfd/directory"
+            className="w-full px-4 py-3 bg-secondary border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent font-mono text-sm"
+          />
+
+          <div className="flex gap-3 mt-6">
+            <button
+              onClick={onClose}
+              className="flex-1 py-3 px-4 bg-secondary text-secondary-foreground font-medium rounded-xl hover:bg-secondary/80 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={onSubmit}
+              disabled={!value.trim()}
+              className="flex-1 py-3 px-4 bg-primary text-primary-foreground font-medium rounded-xl hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+            >
+              <CheckIcon className="w-4 h-4" />
+              Attach
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -284,22 +384,21 @@ const AnalysisIcon = ({ className }) => (
   </svg>
 );
 
-const FileIcon = ({ className }) => (
-  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-  </svg>
-);
-
 const FolderIcon = ({ className }) => (
   <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
   </svg>
 );
 
-const PlayIcon = ({ className }) => (
+const PlusIcon = ({ className }) => (
   <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-    <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+  </svg>
+);
+
+const SendIcon = ({ className }) => (
+  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M12 19V5m0 0l-7 7m7-7l7 7" />
   </svg>
 );
 
@@ -318,6 +417,12 @@ const ErrorIcon = ({ className }) => (
 const RefreshIcon = ({ className }) => (
   <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+  </svg>
+);
+
+const CloseIcon = ({ className }) => (
+  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
   </svg>
 );
 
