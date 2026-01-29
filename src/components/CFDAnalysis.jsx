@@ -1,4 +1,114 @@
 import React, { useState, useRef, useEffect } from 'react';
+import AnalysisResult from './AnalysisResult';
+
+// Mock defect data generator
+const generateMockDefects = () => {
+  return {
+    summary: {
+      total: 13,
+      affectingUpgrade: 10,
+      criticalSevere: 5,
+      moderate: 4,
+      minor: 1,
+    },
+    criticalDefects: [
+      {
+        id: 'CSCwe07002',
+        title: 'Downgrade Failure (APIC)',
+        severity: 'Moderate',
+        status: 'Verified',
+        component: 'ifc-upgrade',
+        impact: 'DIRECT UPGRADE IMPACT',
+        description: 'Downgrade from L++ to KMR6 fails with "Installer Exited - Pre-upgrade callbacks were not completed"',
+        rootCause: 'APIC AE is stuck in infinite retry loop trying to download a deleted snapshot file, preventing upgrade completion',
+        affectedVersions: '5.2(5c), 6.0(1.177b)',
+        workaround: 'Restart AE on each APIC one at a time',
+        riskLevel: 'HIGH',
+      },
+      {
+        id: 'CSCwr32767',
+        title: 'Auto Firmware Upgrade Failure (APIC)',
+        severity: 'Moderate',
+        status: 'Verified',
+        component: 'ifc-upgrade',
+        impact: 'DIRECT UPGRADE IMPACT',
+        description: 'Auto Firmware Upgrade not working for version 16.0(5h) during discovery or rediscovery of switch',
+        rootCause: 'Race condition between AFU trigger and catalog loading. When switch running 16.0(5h) is discovered, the catalog doesn\'t have entries for newer versions, causing AFU to fail with "SwitchFwMo not Found"',
+        affectedVersions: '16.0(5h)',
+        workaround: 'Perform stateful reload of switch where AFU failed',
+        riskLevel: 'HIGH',
+      },
+    ],
+    highSeverityDefects: [
+      {
+        id: 'CSCws84232',
+        title: 'APIC GUI Unresponsive (APIC)',
+        severity: 'Severe',
+        status: 'More Info Needed',
+        component: 'ui',
+        impact: 'INDIRECT UPGRADE IMPACT',
+        description: 'APIC GUI dashboards stuck in "Loading..." due to svccoreCtrlr or svccoreNode returning over 32K entries',
+        affectedVersions: '6.1(4h)',
+        workaround: 'Clean content of svccoreCtrlr or svccoreNode, use CLI instead',
+        riskLevel: 'MEDIUM',
+      },
+    ],
+    stabilityDefects: [
+      {
+        id: 'CSCwp64296',
+        title: 'Rogue EP/COOP Exception MACs Missing (APIC)',
+        severity: 'Moderate',
+        status: 'Verified',
+        component: 'policymgr-epg',
+        description: 'Rogue EP/COOP Exception MACs missing after stateless reload of spine',
+        riskLevel: 'MEDIUM',
+      },
+      {
+        id: 'CSCwq57598',
+        title: 'SNMP Memory Exhaustion (Fabric-SW)',
+        severity: 'Severe',
+        status: 'Verified',
+        component: 'snmp-agent',
+        description: 'Hundreds of snmpd processes exhaust memory and lead to kernel panic with OOM',
+        riskLevel: 'HIGH',
+      },
+    ],
+    lowerRiskDefects: [
+      {
+        id: 'CSCwp91550',
+        title: 'Port Bring-up Delay (Fabric-SW)',
+        severity: 'Moderate',
+        component: 'sdk-platform',
+        description: 'Port bring up delay with 25G-CU*M on specific hardware',
+        riskLevel: 'LOW',
+      },
+      {
+        id: 'CSCwq18643',
+        title: 'LLDP Wrong MAC (Fabric-SW)',
+        severity: 'Minor',
+        component: 'pfm',
+        description: 'LLDP reporting wrong MAC on TLVs for OOB Interface',
+        riskLevel: 'LOW',
+      },
+    ],
+    recommendations: {
+      before: [
+        'Check for deleted snapshot files causing AE busy loops (CSCwe07002)',
+        'Verify catalog compatibility for switches on 16.0(5h) (CSCwr32767)',
+        'Monitor SNMP process counts (CSCwq57598)',
+      ],
+      during: [
+        'Use CLI for monitoring if GUI becomes unresponsive (CSCws84232)',
+        'Monitor spine stability (CSCwq52224)',
+      ],
+      after: [
+        'Verify EP/COOP MAC entries (CSCwp64296)',
+        'Check contract deployment status (CSCwp99433)',
+        'Validate fabric convergence',
+      ],
+    },
+  };
+};
 
 const CFDAnalysis = () => {
   const [messages, setMessages] = useState([
@@ -52,12 +162,8 @@ const CFDAnalysis = () => {
           id: Date.now() + 2,
           type: 'result',
           success: true,
-          data: {
-            filesProcessed: Math.floor(Math.random() * 50) + 10,
-            convergenceRate: `${(Math.random() * 20 + 80).toFixed(1)}%`,
-            avgIterations: Math.floor(Math.random() * 1000) + 500,
-            maxResidual: (Math.random() * 0.001).toExponential(3),
-          },
+          retryData: { input, path },
+          data: generateMockDefects(),
         };
         setMessages((prev) => [...prev, resultMessage]);
       } else {
@@ -125,6 +231,7 @@ const CFDAnalysis = () => {
               key={message.id}
               message={message}
               onRetry={handleRetry}
+              isAnalyzing={isAnalyzing}
             />
           ))}
           <div ref={messagesEndRef} />
@@ -209,7 +316,7 @@ const CFDAnalysis = () => {
 };
 
 // Message Bubble Component
-const MessageBubble = ({ message, onRetry }) => {
+const MessageBubble = ({ message, onRetry, isAnalyzing }) => {
   if (message.type === 'system') {
     return (
       <div className="flex justify-center animate-fade-in">
@@ -222,7 +329,14 @@ const MessageBubble = ({ message, onRetry }) => {
 
   if (message.type === 'user') {
     return (
-      <div className="flex justify-end animate-slide-up">
+      <div className="flex justify-end items-start gap-2 animate-slide-up group">
+        <button
+          onClick={() => onRetry({ input: message.content, path: message.path })}
+          className="opacity-0 group-hover:opacity-100 mt-3 p-1.5 rounded-lg hover:bg-secondary transition-all"
+          title="Retry this analysis"
+        >
+          <RefreshIcon className="w-4 h-4 text-muted-foreground" />
+        </button>
         <div className="bg-primary text-primary-foreground px-4 py-3 rounded-2xl rounded-br-md max-w-lg">
           {message.path && (
             <div className="flex items-center gap-2 mb-2 pb-2 border-b border-primary-foreground/20">
@@ -255,21 +369,22 @@ const MessageBubble = ({ message, onRetry }) => {
   if (message.type === 'result') {
     if (message.success) {
       return (
-        <div className="flex justify-start animate-slide-up">
-          <div className="bg-card border border-border rounded-2xl rounded-bl-md max-w-lg overflow-hidden">
-            <div className="bg-success/10 px-4 py-3 flex items-center gap-2 border-b border-border">
-              <div className="w-6 h-6 rounded-full bg-success/20 flex items-center justify-center">
-                <CheckIcon className="w-4 h-4 text-success" />
-              </div>
-              <span className="font-medium text-sm text-foreground">Analysis Complete</span>
+        <div className="animate-slide-up group">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-6 h-6 rounded-full bg-success/20 flex items-center justify-center">
+              <CheckIcon className="w-4 h-4 text-success" />
             </div>
-            <div className="p-4 grid grid-cols-2 gap-3">
-              <ResultItem label="Files Processed" value={message.data.filesProcessed} />
-              <ResultItem label="Convergence Rate" value={message.data.convergenceRate} />
-              <ResultItem label="Avg Iterations" value={message.data.avgIterations} />
-              <ResultItem label="Max Residual" value={message.data.maxResidual} />
-            </div>
+            <span className="font-medium text-sm text-foreground">Analysis Complete</span>
+            <button
+              onClick={() => onRetry(message.retryData)}
+              disabled={isAnalyzing}
+              className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-secondary disabled:opacity-50 transition-all ml-auto"
+              title="Re-run this analysis"
+            >
+              <RefreshIcon className="w-4 h-4 text-muted-foreground" />
+            </button>
           </div>
+          <AnalysisResult data={message.data} />
         </div>
       );
     } else {
@@ -300,14 +415,6 @@ const MessageBubble = ({ message, onRetry }) => {
 
   return null;
 };
-
-// Result Item Component
-const ResultItem = ({ label, value }) => (
-  <div className="bg-secondary/50 rounded-lg p-3">
-    <p className="text-xs text-muted-foreground mb-1">{label}</p>
-    <p className="text-sm font-semibold text-foreground">{value}</p>
-  </div>
-);
 
 // Path Dialog Component
 const PathDialog = ({ value, onChange, onSubmit, onClose }) => {
