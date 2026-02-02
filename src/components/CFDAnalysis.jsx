@@ -110,7 +110,7 @@ const generateMockDefects = () => {
   };
 };
 
-const CFDAnalysis = () => {
+const CFDAnalysis = ({ initialPath = '' }) => {
   const [messages, setMessages] = useState([
     {
       id: 1,
@@ -119,7 +119,7 @@ const CFDAnalysis = () => {
     },
   ]);
   const [inputValue, setInputValue] = useState('');
-  const [attachedPath, setAttachedPath] = useState('');
+  const [attachedPath, setAttachedPath] = useState(initialPath);
   const [isPathDialogOpen, setIsPathDialogOpen] = useState(false);
   const [pathInput, setPathInput] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
