@@ -111,18 +111,13 @@ const generateMockDefects = () => {
 };
 
 const CFDAnalysis = ({ initialPath = '' }) => {
-  const [messages, setMessages] = useState([
-    {
-      id: 1,
-      type: 'system',
-      content: 'Welcome to CFD Analysis. Enter comma-separated CFD IDs or attach a directory path using the + button.',
-    },
-  ]);
+  const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
   const [attachedPath, setAttachedPath] = useState(initialPath);
   const [isPathDialogOpen, setIsPathDialogOpen] = useState(false);
   const [pathInput, setPathInput] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisMode, setAnalysisMode] = useState('analyse'); // 'analyse' or 'detection'
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
@@ -133,6 +128,23 @@ const CFDAnalysis = ({ initialPath = '' }) => {
     scrollToBottom();
   }, [messages]);
 
+  const handleNewChat = async () => {
+    // Clear session - call backend API
+    try {
+      // TODO: Replace with actual API endpoint
+      // await fetch('/api/clear-session', { method: 'POST' });
+      console.log('Clearing session...');
+    } catch (error) {
+      console.error('Failed to clear session:', error);
+    }
+    
+    // Reset local state
+    setMessages([]);
+    setInputValue('');
+    setAttachedPath('');
+    setIsAnalyzing(false);
+  };
+
   const runAnalysis = (input, path) => {
     // Add user message
     const userMessage = {
@@ -140,6 +152,7 @@ const CFDAnalysis = ({ initialPath = '' }) => {
       type: 'user',
       content: input || null,
       path: path || null,
+      mode: analysisMode,
     };
     setMessages((prev) => [...prev, userMessage]);
 
@@ -147,7 +160,7 @@ const CFDAnalysis = ({ initialPath = '' }) => {
     const loadingId = Date.now() + 1;
     setMessages((prev) => [
       ...prev,
-      { id: loadingId, type: 'loading', content: 'Analyzing CFD data…' },
+      { id: loadingId, type: 'loading', content: `Running ${analysisMode === 'analyse' ? 'analysis' : 'detection logic'}…` },
     ]);
     setIsAnalyzing(true);
 
@@ -213,19 +226,40 @@ const CFDAnalysis = ({ initialPath = '' }) => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Header */}
-      <header className="border-b border-border bg-card px-4 py-4 flex items-center justify-center">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
-            <AnalysisIcon className="w-5 h-5 text-primary" />
-          </div>
-          <h1 className="text-lg font-semibold text-foreground">CFD Analysis</h1>
+      {/* Top Navigation Bar */}
+      <header className="border-b border-border bg-card px-4 py-3">
+        <div className="max-w-5xl mx-auto flex items-center gap-3">
+          <button
+            onClick={() => setIsPathDialogOpen(true)}
+            className="px-4 py-2 border border-border rounded-lg bg-card hover:bg-accent text-foreground text-sm font-medium transition-colors"
+          >
+            Bug ID
+          </button>
+          <button
+            onClick={() => window.location.href = '/defects'}
+            className="px-4 py-2 border border-border rounded-lg bg-card hover:bg-accent text-foreground text-sm font-medium transition-colors"
+          >
+            List Defects
+          </button>
+          <div className="flex-1" />
+          <button
+            onClick={handleNewChat}
+            className="px-4 py-2 border border-primary rounded-lg bg-primary/10 hover:bg-primary/20 text-primary text-sm font-medium transition-colors flex items-center gap-2"
+          >
+            <PlusIcon className="w-4 h-4" />
+            New Chat
+          </button>
         </div>
       </header>
 
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
+          {messages.length === 0 && (
+            <div className="flex items-center justify-center h-64 text-muted-foreground text-sm">
+              Start a new analysis by entering Bug IDs or attaching a directory path
+            </div>
+          )}
           {messages.map((message) => (
             <MessageBubble
               key={message.id}
@@ -238,36 +272,53 @@ const CFDAnalysis = ({ initialPath = '' }) => {
         </div>
       </div>
 
+      {/* Attached Path Preview */}
+      {attachedPath && (
+        <div className="border-t border-border bg-card px-4 py-2">
+          <div className="max-w-5xl mx-auto flex items-center gap-2">
+            <div className="flex items-center gap-2 bg-accent text-accent-foreground px-3 py-2 rounded-lg text-sm">
+              <FolderIcon className="w-4 h-4" />
+              <span className="font-mono text-xs max-w-xs truncate">{attachedPath}</span>
+              <button
+                onClick={removeAttachment}
+                className="ml-1 hover:text-destructive transition-colors"
+              >
+                <CloseIcon className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Input Area */}
       <div className="border-t border-border bg-card p-4">
-        <div className="max-w-3xl mx-auto">
-          {/* Attached Path Preview */}
-          {attachedPath && (
-            <div className="mb-3 flex items-center gap-2 animate-fade-in">
-              <div className="flex items-center gap-2 bg-accent text-accent-foreground px-3 py-2 rounded-lg text-sm">
-                <FolderIcon className="w-4 h-4" />
-                <span className="font-mono text-xs max-w-xs truncate">{attachedPath}</span>
-                <button
-                  onClick={removeAttachment}
-                  className="ml-1 hover:text-destructive transition-colors"
-                >
-                  <CloseIcon className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          )}
+        <div className="max-w-5xl mx-auto flex items-end gap-3">
+          {/* Mode Buttons */}
+          <div className="flex flex-col gap-2">
+            <button
+              onClick={() => setAnalysisMode('analyse')}
+              className={`px-4 py-2 border rounded-lg text-sm font-medium transition-colors ${
+                analysisMode === 'analyse'
+                  ? 'border-primary bg-primary text-primary-foreground'
+                  : 'border-border bg-card hover:bg-accent text-foreground'
+              }`}
+            >
+              Analyse
+            </button>
+            <button
+              onClick={() => setAnalysisMode('detection')}
+              className={`px-4 py-2 border rounded-lg text-sm font-medium transition-colors ${
+                analysisMode === 'detection'
+                  ? 'border-primary bg-primary text-primary-foreground'
+                  : 'border-border bg-card hover:bg-accent text-foreground'
+              }`}
+            >
+              Detection Logic
+            </button>
+          </div>
 
           {/* Input Bar */}
-          <div className="flex items-end gap-2 bg-secondary rounded-2xl p-2 border border-border focus-within:border-primary transition-colors">
-            {/* Plus Button */}
-            <button
-              onClick={() => setIsPathDialogOpen(true)}
-              className="flex-shrink-0 w-10 h-10 rounded-xl bg-card hover:bg-accent flex items-center justify-center transition-colors border border-border"
-              title="Attach directory path"
-            >
-              <PlusIcon className="w-5 h-5 text-muted-foreground" />
-            </button>
-
+          <div className="flex-1 flex items-end gap-2 bg-secondary rounded-xl p-2 border border-border focus-within:border-primary transition-colors">
             {/* Text Input */}
             <textarea
               value={inputValue}
@@ -292,10 +343,6 @@ const CFDAnalysis = ({ initialPath = '' }) => {
               <SendIcon className="w-5 h-5 text-primary-foreground" />
             </button>
           </div>
-
-          <p className="text-xs text-muted-foreground text-center mt-3">
-            Use + to attach a CFD directory path, or enter comma-separated IDs directly
-          </p>
         </div>
       </div>
 
