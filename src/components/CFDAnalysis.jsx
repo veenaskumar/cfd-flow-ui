@@ -118,6 +118,9 @@ const CFDAnalysis = ({ initialPath = '' }) => {
   const [pathInput, setPathInput] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisMode, setAnalysisMode] = useState('analyse'); // 'analyse' or 'detection'
+  const [isBugIdDialogOpen, setIsBugIdDialogOpen] = useState(false);
+  const [bugIdInput, setBugIdInput] = useState('');
+  const [isBugIdLoading, setIsBugIdLoading] = useState(false);
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
@@ -216,6 +219,30 @@ const CFDAnalysis = ({ initialPath = '' }) => {
     }
   };
 
+  const handleBugIdSubmit = async () => {
+    if (!bugIdInput.trim()) return;
+    
+    setIsBugIdLoading(true);
+    
+    try {
+      // TODO: Replace with actual API call to fetch bug details
+      // const response = await fetch(`/api/bug/${bugIdInput.trim()}`);
+      // const data = await response.json();
+      
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Add bug ID to input and trigger analysis
+      setInputValue(bugIdInput.trim());
+      setBugIdInput('');
+      setIsBugIdDialogOpen(false);
+    } catch (error) {
+      console.error('Failed to fetch bug:', error);
+    } finally {
+      setIsBugIdLoading(false);
+    }
+  };
+
   const handleRetry = (retryData) => {
     runAnalysis(retryData.input, retryData.path);
   };
@@ -230,7 +257,7 @@ const CFDAnalysis = ({ initialPath = '' }) => {
       <header className="border-b border-border bg-card px-4 py-3">
         <div className="max-w-5xl mx-auto flex items-center gap-3">
           <button
-            onClick={() => setIsPathDialogOpen(true)}
+            onClick={() => setIsBugIdDialogOpen(true)}
             className="px-4 py-2 border border-border rounded-lg bg-card hover:bg-accent text-foreground text-sm font-medium transition-colors"
           >
             Bug ID
@@ -347,6 +374,7 @@ const CFDAnalysis = ({ initialPath = '' }) => {
       </div>
 
       {/* Path Dialog */}
+      {/* Path Dialog */}
       {isPathDialogOpen && (
         <PathDialog
           value={pathInput}
@@ -355,6 +383,22 @@ const CFDAnalysis = ({ initialPath = '' }) => {
           onClose={() => {
             setIsPathDialogOpen(false);
             setPathInput('');
+          }}
+        />
+      )}
+
+      {/* Bug ID Dialog */}
+      {isBugIdDialogOpen && (
+        <BugIdDialog
+          value={bugIdInput}
+          onChange={setBugIdInput}
+          onSubmit={handleBugIdSubmit}
+          isLoading={isBugIdLoading}
+          onClose={() => {
+            if (!isBugIdLoading) {
+              setIsBugIdDialogOpen(false);
+              setBugIdInput('');
+            }
           }}
         />
       )}
@@ -531,7 +575,106 @@ const PathDialog = ({ value, onChange, onSubmit, onClose }) => {
   );
 };
 
+// Bug ID Dialog Component
+const BugIdDialog = ({ value, onChange, onSubmit, isLoading, onClose }) => {
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !isLoading) {
+      e.preventDefault();
+      onSubmit();
+    }
+    if (e.key === 'Escape' && !isLoading) {
+      onClose();
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in">
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-foreground/20 backdrop-blur-sm" onClick={isLoading ? undefined : onClose} />
+
+      {/* Dialog */}
+      <div className="relative bg-card border border-border rounded-2xl shadow-elevated w-full max-w-md animate-slide-up">
+        <div className="p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+              <BugIcon className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <h2 className="font-semibold text-foreground">Enter Bug ID</h2>
+              <p className="text-sm text-muted-foreground">Enter a CFD bug ID (e.g., CSCws1234)</p>
+            </div>
+          </div>
+
+          <input
+            ref={inputRef}
+            type="text"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="CSCws1234"
+            disabled={isLoading}
+            className="w-full px-4 py-3 bg-secondary border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent font-mono text-sm disabled:opacity-50"
+          />
+
+          <div className="flex gap-3 mt-6">
+            <button
+              onClick={onClose}
+              disabled={isLoading}
+              className="flex-1 py-3 px-4 bg-secondary text-secondary-foreground font-medium rounded-xl hover:bg-secondary/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={onSubmit}
+              disabled={!value.trim() || isLoading}
+              className="flex-1 py-3 px-4 bg-primary text-primary-foreground font-medium rounded-xl hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+            >
+              {isLoading ? (
+                <>
+                  <LoadingSpinner className="w-4 h-4" />
+                  Loading...
+                </>
+              ) : (
+                <>
+                  <SearchIcon className="w-4 h-4" />
+                  Search
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Loading Spinner Component
+const LoadingSpinner = ({ className }) => (
+  <div className={`${className} relative`}>
+    <div className="absolute inset-0 rounded-full border-2 border-primary-foreground/30"></div>
+    <div className="absolute inset-0 rounded-full border-2 border-primary-foreground border-t-transparent animate-spin"></div>
+  </div>
+);
+
 // Icons
+const BugIcon = ({ className }) => (
+  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+  </svg>
+);
+
+const SearchIcon = ({ className }) => (
+  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+  </svg>
+);
+
 const AnalysisIcon = ({ className }) => (
   <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
