@@ -1,7 +1,11 @@
-import CFDAnalysis from "../components/CFDAnalysis";
+import WelcomePage from "../components/WelcomePage";
 
-const Index = () => {
-  return <CFDAnalysis />;
+interface IndexProps {
+  onSetPath: (path: string) => void;
+}
+
+const Index = ({ onSetPath }: IndexProps) => {
+  return <WelcomePage onSetPath={onSetPath} />;
 };
 
 export default Index;
