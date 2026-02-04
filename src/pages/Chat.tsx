@@ -5,6 +5,7 @@ interface ChatProps {
 }
 
 const Chat = ({ initialPath }: ChatProps) => {
+  
   return <CFDAnalysis initialPath={initialPath} />;
 };
 

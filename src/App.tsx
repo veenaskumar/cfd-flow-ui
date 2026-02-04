@@ -24,7 +24,6 @@ const App = () => {
             <Route path="/" element={<Index onSetPath={setDirectoryPath} />} />
             <Route path="/chat" element={<Chat initialPath={directoryPath} />} />
             <Route path="/defects" element={<Defects directoryPath={directoryPath} />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

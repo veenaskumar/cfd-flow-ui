@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import AnalysisResult from './AnalysisResult';
+import { useNavigate } from 'react-router-dom';
 
 // Mock defect data generator
 const generateMockDefects = () => {
@@ -122,6 +123,8 @@ const CFDAnalysis = ({ initialPath = '' }) => {
   const [bugIdInput, setBugIdInput] = useState('');
   const [isBugIdLoading, setIsBugIdLoading] = useState(false);
   const messagesEndRef = useRef(null);
+  const navigate = useNavigate();
+  console.log('Initial Path:', initialPath);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -132,7 +135,6 @@ const CFDAnalysis = ({ initialPath = '' }) => {
   }, [messages]);
 
   const handleNewChat = async () => {
-    // Clear session - call backend API
     try {
       // TODO: Replace with actual API endpoint
       // await fetch('/api/clear-session', { method: 'POST' });
@@ -263,7 +265,7 @@ const CFDAnalysis = ({ initialPath = '' }) => {
             Bug ID
           </button>
           <button
-            onClick={() => window.location.href = '/defects'}
+            onClick={() => navigate('/defects')}
             className="px-4 py-2 border border-border rounded-lg bg-card hover:bg-accent text-foreground text-sm font-medium transition-colors"
           >
             List Defects
