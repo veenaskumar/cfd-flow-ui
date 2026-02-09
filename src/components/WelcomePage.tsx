@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { 
   FolderOpen, 
   X, 
@@ -24,10 +23,12 @@ import {
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
-
-interface WelcomePageProps {
-  onSetPath: (path: string) => void;
-}
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 type ValidationStatus = 'idle' | 'valid' | 'warning' | 'error';
 
@@ -53,7 +54,7 @@ const mockBugData: BugData[] = [
 
 const RECENT_PATHS_KEY = 'cfd_recent_paths';
 
-const WelcomePage: React.FC<WelcomePageProps> = ({ onSetPath }) => {
+const WelcomePage: React.FC = () => {
   const [directoryPath, setDirectoryPath] = useState('');
   const [recentPaths, setRecentPaths] = useState<string[]>([]);
   const [showRecentPaths, setShowRecentPaths] = useState(false);
@@ -63,7 +64,8 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ onSetPath }) => {
   const [bugData, setBugData] = useState<BugData[]>([]);
   const [userQuery, setUserQuery] = useState('');
   const [isQueryLoading, setIsQueryLoading] = useState(false);
-  const navigate = useNavigate();
+  const [selectedBug, setSelectedBug] = useState<BugData | null>(null);
+  const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
 
   // Load recent paths from localStorage
   useEffect(() => {
@@ -138,7 +140,6 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ onSetPath }) => {
 
     setIsScanning(true);
     setBugData([]);
-    onSetPath(directoryPath.trim());
     saveToRecentPaths(directoryPath.trim());
 
     // Simulate scanning delay
@@ -148,9 +149,9 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ onSetPath }) => {
     setIsScanning(false);
   };
 
-  const handleViewDetails = (bugId: string) => {
-    onSetPath(directoryPath.trim());
-    navigate(`/chat?bugId=${bugId}`);
+  const handleViewDetails = (bug: BugData) => {
+    setSelectedBug(bug);
+    setIsDetailDialogOpen(true);
   };
 
   const handleQuerySubmit = async () => {
@@ -160,9 +161,10 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ onSetPath }) => {
     // Simulate query processing
     await new Promise(resolve => setTimeout(resolve, 1500));
     
-    // Navigate to chat with query
-    onSetPath(directoryPath.trim());
-    navigate(`/chat?query=${encodeURIComponent(userQuery)}`);
+    // For now, just show a result in the console or handle inline
+    console.log('Query submitted:', userQuery);
+    setIsQueryLoading(false);
+    setUserQuery('');
   };
 
   const getValidationIcon = () => {
@@ -365,7 +367,7 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ onSetPath }) => {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => handleViewDetails(bug.bugId)}
+                          onClick={() => handleViewDetails(bug)}
                           className="h-8 w-8 hover:bg-primary/10"
                         >
                           <Eye className="w-4 h-4 text-primary" />
@@ -413,6 +415,30 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ onSetPath }) => {
           </div>
         </div>
       </div>
+
+      {/* Bug Detail Dialog */}
+      <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Bug className="w-5 h-5 text-primary" />
+              {selectedBug?.bugId}
+            </DialogTitle>
+          </DialogHeader>
+          {selectedBug && (
+            <div className="space-y-4 pt-2">
+              <div>
+                <h4 className="text-sm font-medium text-muted-foreground mb-1">Upgrade Analysis Summary</h4>
+                <p className="text-foreground">{selectedBug.upgradeAnalysisSummary}</p>
+              </div>
+              <div>
+                <h4 className="text-sm font-medium text-muted-foreground mb-1">Detailed Summary</h4>
+                <p className="text-foreground">{selectedBug.detailedSummary}</p>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
