@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   FolderOpen, 
   X, 
@@ -8,7 +9,7 @@ import {
   XCircle,
   Bug,
   ArrowUpCircle,
-  Eye,
+  ExternalLink,
   Search,
   Loader2
 } from 'lucide-react';
@@ -23,12 +24,10 @@ import {
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+
+interface WelcomePageProps {
+  onSetPath: (path: string) => void;
+}
 
 type ValidationStatus = 'idle' | 'valid' | 'warning' | 'error';
 
@@ -54,7 +53,8 @@ const mockBugData: BugData[] = [
 
 const RECENT_PATHS_KEY = 'cfd_recent_paths';
 
-const WelcomePage: React.FC = () => {
+const WelcomePage: React.FC<WelcomePageProps> = ({ onSetPath }) => {
+  const navigate = useNavigate();
   const [directoryPath, setDirectoryPath] = useState('');
   const [recentPaths, setRecentPaths] = useState<string[]>([]);
   const [showRecentPaths, setShowRecentPaths] = useState(false);
@@ -64,8 +64,6 @@ const WelcomePage: React.FC = () => {
   const [bugData, setBugData] = useState<BugData[]>([]);
   const [userQuery, setUserQuery] = useState('');
   const [isQueryLoading, setIsQueryLoading] = useState(false);
-  const [selectedBug, setSelectedBug] = useState<BugData | null>(null);
-  const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
 
   // Load recent paths from localStorage
   useEffect(() => {
@@ -149,22 +147,15 @@ const WelcomePage: React.FC = () => {
     setIsScanning(false);
   };
 
-  const handleViewDetails = (bug: BugData) => {
-    setSelectedBug(bug);
-    setIsDetailDialogOpen(true);
+  const handleViewDetails = (bugId: string) => {
+    onSetPath(directoryPath.trim());
+    navigate(`/analysis/${bugId}`);
   };
 
   const handleQuerySubmit = async () => {
     if (!userQuery.trim()) return;
-    setIsQueryLoading(true);
-    
-    // Simulate query processing
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    // For now, just show a result in the console or handle inline
-    console.log('Query submitted:', userQuery);
-    setIsQueryLoading(false);
-    setUserQuery('');
+    onSetPath(directoryPath.trim());
+    navigate(`/chat?query=${encodeURIComponent(userQuery)}`);
   };
 
   const getValidationIcon = () => {
@@ -364,14 +355,13 @@ const WelcomePage: React.FC = () => {
                         {bug.detailedSummary}
                       </TableCell>
                       <TableCell className="text-center">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleViewDetails(bug)}
-                          className="h-8 w-8 hover:bg-primary/10"
+                        <button
+                          onClick={() => handleViewDetails(bug.bugId)}
+                          className="text-primary hover:underline inline-flex items-center gap-1 text-sm"
                         >
-                          <Eye className="w-4 h-4 text-primary" />
-                        </Button>
+                          View Details
+                          <ExternalLink className="w-3 h-3" />
+                        </button>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -396,49 +386,16 @@ const WelcomePage: React.FC = () => {
             <div className="flex justify-end">
               <Button 
                 onClick={handleQuerySubmit}
-                disabled={!userQuery.trim() || isQueryLoading}
+                disabled={!userQuery.trim()}
                 className="px-6"
               >
-                {isQueryLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    <Search className="w-4 h-4 mr-2" />
-                    Submit
-                  </>
-                )}
+                <Search className="w-4 h-4 mr-2" />
+                Submit
               </Button>
             </div>
           </div>
         </div>
       </div>
-
-      {/* Bug Detail Dialog */}
-      <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Bug className="w-5 h-5 text-primary" />
-              {selectedBug?.bugId}
-            </DialogTitle>
-          </DialogHeader>
-          {selectedBug && (
-            <div className="space-y-4 pt-2">
-              <div>
-                <h4 className="text-sm font-medium text-muted-foreground mb-1">Upgrade Analysis Summary</h4>
-                <p className="text-foreground">{selectedBug.upgradeAnalysisSummary}</p>
-              </div>
-              <div>
-                <h4 className="text-sm font-medium text-muted-foreground mb-1">Detailed Summary</h4>
-                <p className="text-foreground">{selectedBug.detailedSummary}</p>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
