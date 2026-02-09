@@ -1,32 +1,18 @@
-import { useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
-import Chat from "./pages/Chat";
-import Defects from "./pages/Defects";
-import NotFound from "./pages/NotFound";
+import WelcomePage from "./components/WelcomePage";
 
 const queryClient = new QueryClient();
 
 const App = () => {
-  const [directoryPath, setDirectoryPath] = useState("");
-
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index onSetPath={setDirectoryPath} />} />
-            <Route path="/chat" element={<Chat initialPath={directoryPath} />} />
-            <Route path="/defects" element={<Defects directoryPath={directoryPath} />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
+        <WelcomePage />
       </TooltipProvider>
     </QueryClientProvider>
   );
