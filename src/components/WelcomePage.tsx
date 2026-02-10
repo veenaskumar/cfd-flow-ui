@@ -459,7 +459,7 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ onSetPath }) => {
                   onClick={() => {
                     if (bugIdQuery.trim()) {
                       onSetPath(directoryPath.trim());
-                      navigate(`/analysis/${encodeURIComponent(bugIdQuery.trim())}`);
+                      navigate(`/chat?query=${encodeURIComponent(bugIdQuery.trim())}`);
                     }
                   }}
                   disabled={!bugIdQuery.trim()}
