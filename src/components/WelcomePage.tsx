@@ -200,7 +200,7 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ onSetPath }) => {
           {/* Directory Path Input */}
           <div className="lg:col-span-2 bg-card border border-border rounded-xl p-6">
             <label className="block text-sm font-medium text-foreground mb-3">
-              Directory Path
+              CDET Directory Path
             </label>
             <div className="flex gap-3">
               <div className="flex-1 relative">
@@ -288,7 +288,7 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ onSetPath }) => {
           {/* BEMS Path Input */}
           <div className="lg:col-span-2 bg-card border border-border rounded-xl p-6">
             <label className="block text-sm font-medium text-foreground mb-3">
-              BEMS Path
+              SR Path
             </label>
             <div className="flex gap-3">
               <div className="flex-1 relative">
@@ -297,7 +297,7 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ onSetPath }) => {
                   type="text"
                   value={bemsPath}
                   onChange={(e) => setBemsPath(e.target.value)}
-                  placeholder="Enter BEMS directory path…"
+                  placeholder="Enter SR directory path…"
                   className="w-full h-11 pl-11 pr-10 bg-background border border-input rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent font-mono text-sm"
                 />
                 {bemsPath && (
@@ -334,7 +334,7 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ onSetPath }) => {
                 <ArrowUpCircle className="w-6 h-6 text-success" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Upgrade Candidates</p>
+                <p className="text-sm text-muted-foreground">Pre-Upgrade Candidates</p>
                 <p className="text-2xl font-bold text-foreground">
                   {bugData.length > 0 ? Math.ceil(bugData.length * 0.6) : 0}
                 </p>
