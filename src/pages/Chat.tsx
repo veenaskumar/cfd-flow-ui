@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Send, Loader2, RotateCcw, Bot, User } from 'lucide-react';
+import { ArrowLeft, Send, Loader2, RotateCcw, Bot, User, Bug, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -24,12 +24,20 @@ const Chat: React.FC<ChatProps> = ({ directoryPath }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [bugId, setBugId] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Send initial query if present
+  // Extract bug ID from initial query if present
   useEffect(() => {
     if (initialQuery && messages.length === 0) {
-      handleSendMessage(initialQuery);
+      const bugIdMatch = initialQuery.match(/^\[Bug ID: (.+?)\]\s*/);
+      if (bugIdMatch) {
+        setBugId(bugIdMatch[1]);
+        const cleanQuery = initialQuery.replace(/^\[Bug ID: .+?\]\s*/, '');
+        handleSendMessage(cleanQuery);
+      } else {
+        handleSendMessage(initialQuery);
+      }
     }
   }, [initialQuery]);
 
@@ -78,6 +86,7 @@ const Chat: React.FC<ChatProps> = ({ directoryPath }) => {
   const handleNewChat = () => {
     setMessages([]);
     setInputValue('');
+    setBugId('');
   };
 
   return (
@@ -163,19 +172,31 @@ const Chat: React.FC<ChatProps> = ({ directoryPath }) => {
       {/* Input Area */}
       <div className="border-t border-border bg-card p-4 flex-shrink-0">
         <div className="max-w-4xl mx-auto">
-          <div className="flex gap-3">
+          <div className="flex gap-3 items-end">
+            {bugId && (
+              <div className="flex items-center gap-1.5 bg-primary/10 border border-primary/20 rounded-lg px-3 py-2 text-sm font-mono text-primary whitespace-nowrap h-[50px]">
+                <Bug className="w-4 h-4 flex-shrink-0" />
+                {bugId}
+                <button
+                  onClick={() => setBugId('')}
+                  className="p-0.5 hover:bg-primary/20 rounded transition-colors ml-1"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            )}
             <Textarea
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Ask about a specific bug or upgrade scenario…"
-              className="min-h-[50px] max-h-[150px] resize-none"
+              className="min-h-[50px] max-h-[150px] resize-none flex-1"
               disabled={isLoading}
             />
             <Button
               onClick={() => handleSendMessage(inputValue)}
               disabled={!inputValue.trim() || isLoading}
-              className="h-auto px-4"
+              className="h-[50px] px-4"
             >
               {isLoading ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
