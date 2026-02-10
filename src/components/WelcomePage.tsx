@@ -157,7 +157,10 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ onSetPath }) => {
   const handleQuerySubmit = async () => {
     if (!userQuery.trim()) return;
     onSetPath(directoryPath.trim());
-    navigate(`/chat?query=${encodeURIComponent(userQuery)}`);
+    const fullQuery = bugIdQuery.trim() 
+      ? `[Bug ID: ${bugIdQuery.trim()}] ${userQuery.trim()}`
+      : userQuery.trim();
+    navigate(`/chat?query=${encodeURIComponent(fullQuery)}`);
   };
 
   const getValidationIcon = () => {
@@ -411,12 +414,26 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ onSetPath }) => {
               User Query
             </label>
             <div className="space-y-3">
-              <Textarea
-                value={userQuery}
-                onChange={(e) => setUserQuery(e.target.value)}
-                placeholder="Ask about a specific bug or upgrade scenario…"
-                className="min-h-[100px] resize-none"
-              />
+              <div className="flex gap-3 items-start">
+                <Textarea
+                  value={userQuery}
+                  onChange={(e) => setUserQuery(e.target.value)}
+                  placeholder="Ask about a specific bug or upgrade scenario…"
+                  className="min-h-[100px] resize-none flex-1"
+                />
+                {bugIdQuery.trim() && (
+                  <div className="flex items-center gap-2 bg-primary/10 border border-primary/20 rounded-lg px-3 py-2 text-sm font-mono text-primary whitespace-nowrap">
+                    <Bug className="w-4 h-4" />
+                    {bugIdQuery.trim()}
+                    <button
+                      onClick={() => setBugIdQuery('')}
+                      className="p-0.5 hover:bg-primary/20 rounded transition-colors"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                )}
+              </div>
               <div className="flex justify-end">
                 <Button 
                   onClick={handleQuerySubmit}
@@ -454,21 +471,9 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ onSetPath }) => {
                   </button>
                 )}
               </div>
-              <div className="flex justify-end">
-                <Button
-                  onClick={() => {
-                    if (bugIdQuery.trim()) {
-                      onSetPath(directoryPath.trim());
-                      navigate(`/chat?query=${encodeURIComponent(bugIdQuery.trim())}`);
-                    }
-                  }}
-                  disabled={!bugIdQuery.trim()}
-                  className="px-6"
-                >
-                  <Search className="w-4 h-4 mr-2" />
-                  Lookup
-                </Button>
-              </div>
+              <p className="text-xs text-muted-foreground">
+                Enter a Bug ID and it will be attached to your User Query when you submit.
+              </p>
             </div>
           </div>
         </div>
