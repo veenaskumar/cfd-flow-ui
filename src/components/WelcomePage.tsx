@@ -63,6 +63,8 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ onSetPath }) => {
   const [isScanning, setIsScanning] = useState(false);
   const [bugData, setBugData] = useState<BugData[]>([]);
   const [userQuery, setUserQuery] = useState('');
+  const [bugIdQuery, setBugIdQuery] = useState('');
+  const [bemsPath, setBemsPath] = useState('');
   const [isQueryLoading, setIsQueryLoading] = useState(false);
 
   // Load recent paths from localStorage
@@ -283,6 +285,36 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ onSetPath }) => {
             )}
           </div>
 
+          {/* BEMS Path Input */}
+          <div className="lg:col-span-2 bg-card border border-border rounded-xl p-6">
+            <label className="block text-sm font-medium text-foreground mb-3">
+              BEMS Path
+            </label>
+            <div className="flex gap-3">
+              <div className="flex-1 relative">
+                <FolderOpen className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <input
+                  type="text"
+                  value={bemsPath}
+                  onChange={(e) => setBemsPath(e.target.value)}
+                  placeholder="Enter BEMS directory path…"
+                  className="w-full h-11 pl-11 pr-10 bg-background border border-input rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent font-mono text-sm"
+                />
+                {bemsPath && (
+                  <button
+                    onClick={() => setBemsPath('')}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 hover:bg-muted rounded-md transition-colors"
+                  >
+                    <X className="w-4 h-4 text-muted-foreground" />
+                  </button>
+                )}
+              </div>
+              <Button variant="outline" className="h-11 px-4">
+                Browse
+              </Button>
+            </div>
+          </div>
+
           {/* Info Cards */}
           <div className="grid grid-cols-2 lg:grid-cols-1 gap-4">
             {/* Total Bugs Card */}
@@ -371,27 +403,72 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ onSetPath }) => {
           </ScrollArea>
         </div>
 
-        {/* User Query Section */}
-        <div className="bg-card border border-border rounded-xl p-6">
-          <label className="block text-sm font-medium text-foreground mb-3">
-            User Query
-          </label>
-          <div className="space-y-3">
-            <Textarea
-              value={userQuery}
-              onChange={(e) => setUserQuery(e.target.value)}
-              placeholder="Ask about a specific bug or upgrade scenario…"
-              className="min-h-[100px] resize-none"
-            />
-            <div className="flex justify-end">
-              <Button 
-                onClick={handleQuerySubmit}
-                disabled={!userQuery.trim()}
-                className="px-6"
-              >
-                <Search className="w-4 h-4 mr-2" />
-                Submit
-              </Button>
+        {/* User Query & Bug ID Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* User Query */}
+          <div className="lg:col-span-2 bg-card border border-border rounded-xl p-6">
+            <label className="block text-sm font-medium text-foreground mb-3">
+              User Query
+            </label>
+            <div className="space-y-3">
+              <Textarea
+                value={userQuery}
+                onChange={(e) => setUserQuery(e.target.value)}
+                placeholder="Ask about a specific bug or upgrade scenario…"
+                className="min-h-[100px] resize-none"
+              />
+              <div className="flex justify-end">
+                <Button 
+                  onClick={handleQuerySubmit}
+                  disabled={!userQuery.trim()}
+                  className="px-6"
+                >
+                  <Search className="w-4 h-4 mr-2" />
+                  Submit
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Bug ID Input */}
+          <div className="bg-card border border-border rounded-xl p-6">
+            <label className="block text-sm font-medium text-foreground mb-3">
+              Bug ID
+            </label>
+            <div className="space-y-3">
+              <div className="relative">
+                <Bug className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <input
+                  type="text"
+                  value={bugIdQuery}
+                  onChange={(e) => setBugIdQuery(e.target.value)}
+                  placeholder="e.g. CSCwe07002"
+                  className="w-full h-11 pl-11 pr-10 bg-background border border-input rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent font-mono text-sm"
+                />
+                {bugIdQuery && (
+                  <button
+                    onClick={() => setBugIdQuery('')}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 hover:bg-muted rounded-md transition-colors"
+                  >
+                    <X className="w-4 h-4 text-muted-foreground" />
+                  </button>
+                )}
+              </div>
+              <div className="flex justify-end">
+                <Button
+                  onClick={() => {
+                    if (bugIdQuery.trim()) {
+                      onSetPath(directoryPath.trim());
+                      navigate(`/analysis/${encodeURIComponent(bugIdQuery.trim())}`);
+                    }
+                  }}
+                  disabled={!bugIdQuery.trim()}
+                  className="px-6"
+                >
+                  <Search className="w-4 h-4 mr-2" />
+                  Lookup
+                </Button>
+              </div>
             </div>
           </div>
         </div>
